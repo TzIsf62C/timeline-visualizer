@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test Import</title></head>
+<body>
+<pre id="output"></pre>
+<script src="dateParser.js"></script>
+<script src="dataManager.js"></script>
+<script>
+// Load sample
+fetch('sample-timeline.json')
+  .then(r => r.text())
+  .then(json => {
+    const imported = JSON.parse(json);
+    document.getElementById('output').textContent = 'First event from JSON:\n' + JSON.stringify(imported.events[0], null, 2);
+    
+    // Try importing
+    try {
+      DataManager.importTimeline(json);
+      const timeline = DataManager.getActiveTimeline();
+      document.getElementById('output').textContent += '\n\nFirst event after import:\n' + JSON.stringify(timeline.events[0], null, 2);
+    } catch(e) {
+      document.getElementById('output').textContent += '\n\nError: ' + e.message;
+    }
+  });
+</script>
+</body>
+</html>

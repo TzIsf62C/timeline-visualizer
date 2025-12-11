@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline Visualizer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Timeline Visualizer</h1>
+            </div>
+
+            <!-- Timeline Management -->
+            <section class="timeline-management">
+                <div class="section-header">
+                    <h2>Timelines</h2>
+                    <button id="newTimelineBtn" class="btn-icon" title="New Timeline">+</button>
+                </div>
+                <div id="timelineList" class="timeline-list"></div>
+            </section>
+
+            <!-- View Mode -->
+            <section class="view-mode">
+                <h2>View Mode</h2>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="viewMode" value="single" checked>
+                        Single Timeline
+                    </label>
+                    <label>
+                        <input type="radio" name="viewMode" value="entity">
+                        Split by Entity
+                    </label>
+                    <label>
+                        <input type="radio" name="viewMode" value="goal">
+                        Split by Goal
+                    </label>
+                </div>
+            </section>
+
+            <!-- Filters -->
+            <section class="filters">
+                <h2>Filters</h2>
+                <div class="filter-group">
+                    <label for="searchInput">Search</label>
+                    <input type="text" id="searchInput" placeholder="Search events...">
+                </div>
+                <div class="filter-group">
+                    <label for="entityFilter">Entity</label>
+                    <select id="entityFilter">
+                        <option value="">All Entities</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="goalFilter">Goal</label>
+                    <select id="goalFilter">
+                        <option value="">All Goals</option>
+                    </select>
+                </div>
+                <button id="clearFiltersBtn" class="btn-secondary">Clear Filters</button>
+            </section>
+
+            <!-- Events List -->
+            <section class="events-section">
+                <div class="section-header">
+                    <h2>Events</h2>
+                    <button id="newEventBtn" class="btn-icon" title="New Event">+</button>
+                </div>
+                <div id="eventsList" class="events-list"></div>
+            </section>
+
+            <!-- Actions -->
+            <section class="actions">
+                <button id="exportJsonBtn" class="btn-secondary">Export JSON</button>
+                <button id="importJsonBtn" class="btn-secondary">Import JSON</button>
+                <button id="exportPngBtn" class="btn-secondary">Export PNG</button>
+                <button id="exportPdfBtn" class="btn-secondary">Export PDF</button>
+            </section>
+        </aside>
+
+        <!-- Main Canvas Area -->
+        <main class="main-content">
+            <button id="themeToggle" class="theme-toggle" title="Toggle Theme">🌙</button>
+            <div class="canvas-container">
+                <svg id="timelineCanvas" width="100%" height="100%">
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                            refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="var(--arrowhead-color)" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+            <div class="zoom-controls">
+                <label for="zoomSlider" style="font-size: 12px; color: #888; margin-right: 8px;">Zoom:</label>
+                <input type="range" id="zoomSlider" min="0.5" max="5" step="0.1" value="1" style="width: 150px;" title="Zoom Level">
+                <button id="resetZoomBtn" class="btn-icon" title="Reset Zoom">⟲</button>
+                <button id="legendBtn" class="btn-icon" title="Show Legend" style="margin-left: 8px;">ⓘ</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Event Modal -->
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">New Event</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="eventForm">
+                    <div class="form-group">
+                        <label for="eventTitle">Title *</label>
+                        <input type="text" id="eventTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventDescription">Description</label>
+                        <textarea id="eventDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventGoal">Goal *</label>
+                        <input type="text" id="eventGoal" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventEntity">Primary Entities *</label>
+                        <input type="text" id="eventEntity" required placeholder="e.g., Product Team, Marketing Team">
+                        <small>Separate multiple entities with commas</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventSecondaryEntity">Secondary Entities</label>
+                        <input type="text" id="eventSecondaryEntity" placeholder="e.g., Finance Team, Legal Team">
+                        <small>Optional - Separate multiple entities with commas</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventDeadline">Deadline Text *</label>
+                        <input type="text" id="eventDeadline" 
+                            placeholder="e.g., by September 2026, April-June 2026, Ongoing" required>
+                        <small>Examples: by September 2026, mid-2027, April-June 2026, Q1-Q2 2026, Ongoing</small>
+                    </div>
+                    <div class="form-group computed-date">
+                        <label>Computed Date:</label>
+                        <span id="computedDateDisplay">—</span>
+                    </div>
+                    <div class="form-group computed-date" id="computedEndDateGroup" style="display: none;">
+                        <label>End Date:</label>
+                        <span id="computedEndDateDisplay">—</span>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" id="cancelEventBtn">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Event</button>
+                        <button type="button" class="btn-danger" id="deleteEventBtn" style="display:none;">Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Detail Card -->
+    <div id="eventCard" class="event-card" style="display: none;">
+        <div class="event-card-header">
+            <h3 id="cardTitle"></h3>
+            <button class="card-close">&times;</button>
+        </div>
+        <div class="event-card-body">
+            <div class="card-field">
+                <strong>Primary Entities:</strong> <span id="cardEntity"></span>
+            </div>
+            <div class="card-field" id="cardSecondaryEntityField" style="display: none;">
+                <strong>Secondary Entities:</strong> <span id="cardSecondaryEntity"></span>
+            </div>
+            <div class="card-field">
+                <strong>Goal:</strong> <span id="cardGoal"></span>
+            </div>
+            <div class="card-field">
+                <strong>Deadline:</strong> <span id="cardDeadline"></span>
+            </div>
+            <div class="card-field">
+                <strong>Date:</strong> <span id="cardDate"></span>
+            </div>
+            <div class="card-field" id="cardDescriptionField" style="display: none;">
+                <strong>Description:</strong> 
+                <p id="cardDescription"></p>
+            </div>
+            <button id="editEventCardBtn" class="btn-primary">Edit</button>
+        </div>
+    </div>
+
+    <!-- Timeline Name Modal -->
+    <div id="timelineModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="timelineModalTitle">New Timeline</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="timelineForm">
+                    <div class="form-group">
+                        <label for="timelineName">Timeline Name *</label>
+                        <input type="text" id="timelineName" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" id="cancelTimelineBtn">Cancel</button>
+                        <button type="submit" class="btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend Modal -->
+    <div id="legendModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Legend</h2>
+                <button class="close-btn" onclick="document.getElementById('legendModal').style.display='none'">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="legendContent" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Legend items will be dynamically populated -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options Modal -->
+    <div id="exportOptionsModal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2>Export Options</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 20px; color: #aaa;">Choose what to export:</p>
+                <div class="radio-group" style="display: flex; flex-direction: column; gap: 15px;">
+                    <label style="cursor: pointer; padding: 12px; border: 1px solid #444; border-radius: 4px; display: flex; align-items: flex-start;">
+                        <input type="radio" name="exportScope" value="visible" checked style="margin-right: 10px; margin-top: 3px;">
+                        <div>
+                            <strong style="display: block; margin-bottom: 4px;">Visible Portion Only</strong>
+                            <small style="color: #888;">Export only what's currently visible in the viewport</small>
+                        </div>
+                    </label>
+                    <label style="cursor: pointer; padding: 12px; border: 1px solid #444; border-radius: 4px; display: flex; align-items: flex-start;">
+                        <input type="radio" name="exportScope" value="full" style="margin-right: 10px; margin-top: 3px;">
+                        <div>
+                            <strong style="display: block; margin-bottom: 4px;">Entire Timeline</strong>
+                            <small style="color: #888;">Export the complete timeline (may take longer for large timelines)</small>
+                        </div>
+                    </label>
+                </div>
+                <div class="modal-actions" style="margin-top: 20px;">
+                    <button type="button" class="btn-secondary" id="cancelExportBtn">Cancel</button>
+                    <button type="button" class="btn-primary" id="confirmExportBtn">Export</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for import -->
+    <input type="file" id="fileInput" accept=".json" style="display: none;">
+
+    <!-- External libraries for export -->
+    <script src="libs/html2canvas.min.js"></script>
+    <script src="libs/jspdf.umd.min.js"></script>
+    
+    <!-- Application scripts -->
+    <script src="dateParser.js"></script>
+    <script src="dataManager.js"></script>
+    <script src="renderer.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
