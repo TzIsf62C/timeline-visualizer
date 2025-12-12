@@ -15,16 +15,17 @@ const DataManager = (() => {
     /**
      * Initialize data from localStorage
      */
-    function init() {
+    async function init() {
         try {
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored) {
                 data = JSON.parse(stored);
             }
 
-            // Preload sample timeline on first use
+            // Preload sample timeline on first use (only if no existing data)
             if (data.timelines.length === 0) {
-                loadSampleTimeline();
+                console.info('Loading sample timeline for first-time users...');
+                await loadSampleTimeline();
             }
 
             // Load active timeline ID
@@ -47,32 +48,21 @@ const DataManager = (() => {
     /**
      * Load sample timeline data on first use
      */
-    function loadSampleTimeline() {
-        fetch('sample-timeline.json')
-            .then(response => response.json())
-            .then(jsonData => {
-                try {
-                    const result = importTimeline(JSON.stringify(jsonData));
-                    if (result.success) {
-                        console.log('Sample timeline loaded successfully');
-                    }
-                } catch (e) {
-                    console.error('Failed to load sample timeline:', e);
-                    // Fall back to empty timeline
-                    const defaultTimeline = createTimeline('My Timeline');
-                    data.timelines.push(defaultTimeline);
-                    data.activeTimelineId = defaultTimeline.id;
-                    save();
-                }
-            })
-            .catch(error => {
-                console.error('Could not fetch sample timeline:', error);
-                // Fall back to empty timeline
-                const defaultTimeline = createTimeline('My Timeline');
-                data.timelines.push(defaultTimeline);
-                data.activeTimelineId = defaultTimeline.id;
-                save();
-            });
+    async function loadSampleTimeline() {
+        try {
+            const response = await fetch('sample-timeline.json');
+            const jsonData = await response.json();
+            const timeline = importTimeline(JSON.stringify(jsonData));
+            return timeline;
+        } catch (error) {
+            console.error('Could not load sample timeline:', error);
+            // Fall back to empty timeline
+            const defaultTimeline = createTimeline('My Timeline');
+            data.timelines.push(defaultTimeline);
+            data.activeTimelineId = defaultTimeline.id;
+            save();
+            return defaultTimeline;
+        }
     }
 
     /**
@@ -473,10 +463,8 @@ const DataManager = (() => {
         save();
     }
 
-    // Initialize on load
-    init();
-
     return {
+        init,
         getTimelines,
         getActiveTimeline,
         addTimeline,

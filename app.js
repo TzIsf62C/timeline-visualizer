@@ -8,9 +8,12 @@ const App = (() => {
     /**
      * Initialize the application
      */
-    function init() {
+    async function init() {
         // Load theme preference
         loadTheme();
+
+        // Initialize data manager (may load sample timeline)
+        await DataManager.init();
 
         // Initialize renderer
         Renderer.init();
@@ -385,19 +388,15 @@ const App = (() => {
         if (currentTheme === 'light') {
             root.setAttribute('data-theme', 'dark');
             if (themeToggleBtn) {
-                console.log('Updating button to moon icon');
                 themeToggleBtn.textContent = '🌙';
                 themeToggleBtn.title = 'Switch to Light Theme';
-                console.log('Button content after update:', themeToggleBtn.textContent);
             }
             localStorage.setItem('theme', 'dark');
         } else {
             root.setAttribute('data-theme', 'light');
             if (themeToggleBtn) {
-                console.log('Updating button to sun icon');
                 themeToggleBtn.textContent = '☀️';
                 themeToggleBtn.title = 'Switch to Dark Theme';
-                console.log('Button content after update:', themeToggleBtn.textContent);
             }
             localStorage.setItem('theme', 'light');
         }
@@ -773,16 +772,6 @@ const App = (() => {
                 tempContainer.appendChild(svgClone);
                 document.body.appendChild(tempContainer);
                 
-                console.log('Export PNG with viewBox:', {
-                    bboxMinX: bbox.minX,
-                    bboxMaxX: bbox.maxX,
-                    bboxMinY: bbox.minY,
-                    bboxMaxY: bbox.maxY,
-                    width,
-                    height,
-                    viewBox: `${bbox.minX - padding} ${bbox.minY - padding} ${width} ${height}`
-                });
-                
                 // Wait a moment for the DOM to update
                 await new Promise(resolve => setTimeout(resolve, 100));
                 
@@ -874,16 +863,6 @@ const App = (() => {
                 
                 tempContainer.appendChild(svgClone);
                 document.body.appendChild(tempContainer);
-                
-                console.log('Export PDF with viewBox:', {
-                    bboxMinX: bbox.minX,
-                    bboxMaxX: bbox.maxX,
-                    bboxMinY: bbox.minY,
-                    bboxMaxY: bbox.maxY,
-                    width,
-                    height,
-                    viewBox: `${bbox.minX - padding} ${bbox.minY - padding} ${width} ${height}`
-                });
                 
                 // Wait a moment for the DOM to update
                 await new Promise(resolve => setTimeout(resolve, 100));

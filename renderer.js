@@ -392,10 +392,6 @@ const Renderer = (() => {
      * Filter events based on current filters
      */
     function getFilteredEvents() {
-        console.log('\n=== Filtering Events ===');
-        console.log('Active filters:', state.filters);
-        console.log(`Total events before filtering: ${state.events.length}`);
-        
         const filtered = state.events.filter(event => {
             // Search filter
             if (state.filters.search) {
@@ -423,13 +419,6 @@ const Renderer = (() => {
                 const isSecondary = secondaryEntities.includes(state.filters.entity);
                 const passes = allEntities.includes(state.filters.entity);
                 
-                console.log(`Event: "${event.title}"`);
-                console.log(`  Primary entities:`, entities);
-                console.log(`  Secondary entities:`, secondaryEntities);
-                console.log(`  Is primary for "${state.filters.entity}": ${isPrimary}`);
-                console.log(`  Is secondary for "${state.filters.entity}": ${isSecondary}`);
-                console.log(`  Passes filter: ${passes}`);
-                
                 if (!passes) {
                     return false;
                 }
@@ -443,7 +432,6 @@ const Renderer = (() => {
             return true;
         });
         
-        console.log(`Events after filtering: ${filtered.length}`);
         return filtered;
     }
 
@@ -627,8 +615,6 @@ const Renderer = (() => {
                 }
             });
             
-            console.log(`Filtered by "${filteringByEntity}": ${primaryEvents.length} primary, ${secondaryEvents.length} secondary`);
-            
             // Assign levels for primary events (above the line)
             const primaryLevels = assignLevelsToEvents(primaryEvents, MIN_SPACING, dateLabelPositions);
             
@@ -640,7 +626,6 @@ const Renderer = (() => {
                 level.forEach(({ event, x, x2 }) => {
                     const offset = levelIndex + 1;
                     const y = axisY - (offset * LABEL_HEIGHT);
-                    console.log(`  Primary "${event.title}" -> level ${levelIndex}, y ${y} (axisY=${axisY})`);
                     positions.push({ event, x, x2, y, level: levelIndex });
                 });
             });
@@ -650,7 +635,6 @@ const Renderer = (() => {
                 level.forEach(({ event, x, x2 }) => {
                     const offset = levelIndex + 1;
                     const y = axisY + (offset * LABEL_HEIGHT);
-                    console.log(`  Secondary "${event.title}" -> level ${levelIndex}, y ${y} (axisY=${axisY})`);
                     positions.push({ event, x, x2, y, level: levelIndex });
                 });
             });
@@ -701,8 +685,6 @@ const Renderer = (() => {
             levels[assignedLevel].push({ event, x, x2, date });
         });
         
-        console.log(`Single timeline: Assigned ${levels.length} levels for collision avoidance`);
-        
         // Convert levels to y positions (alternate above/below axis)
         levels.forEach((level, levelIndex) => {
             level.forEach(({ event, x, x2 }) => {
@@ -710,8 +692,6 @@ const Renderer = (() => {
                 const direction = levelIndex % 2 === 0 ? -1 : 1;
                 const offset = Math.floor(levelIndex / 2) + 2; // Start at 2 to skip first row
                 const y = axisY + (direction * offset * LABEL_HEIGHT);
-                
-                console.log(`  "${event.title}" -> level ${levelIndex}, direction ${direction}, offset ${offset}, y ${y} (axisY=${axisY})`);
                 
                 positions.push({ event, x, x2, y, level: levelIndex });
             });
@@ -724,9 +704,6 @@ const Renderer = (() => {
      * Render single timeline view
      */
     function renderSingleTimeline(events) {
-        console.log('\n=== Rendering Single Timeline ===');
-        console.log(`Rendering ${events.length} events`);
-        
         const rect = svg.getBoundingClientRect();
         const width = rect.width;
         const height = rect.height;
@@ -1201,18 +1178,10 @@ const Renderer = (() => {
             const primaryEvents = [];
             const secondaryEvents = [];
             
-            console.log(`\n=== Processing row: "${key}" ===`);
-            console.log(`Total events in row: ${eventsWithX.length}`);
-            
             eventsWithX.forEach(({ event, x, x2, date }) => {
                 if (splitBy === 'entity') {
                     const primaryEntities = Array.isArray(event.entities) ? event.entities : [event.entity];
                     const isPrimary = primaryEntities.includes(key);
-                    
-                    console.log(`Event: "${event.title}"`);
-                    console.log(`  Primary entities:`, primaryEntities);
-                    console.log(`  Secondary entities:`, event.secondaryEntities || []);
-                    console.log(`  Is primary for "${key}": ${isPrimary}`);
                     
                     if (isPrimary) {
                         primaryEvents.push({ event, x, x2, date });
@@ -1224,9 +1193,6 @@ const Renderer = (() => {
                     primaryEvents.push({ event, x, x2, date });
                 }
             });
-            
-            console.log(`Primary events count: ${primaryEvents.length}`);
-            console.log(`Secondary events count: ${secondaryEvents.length}`);
             
             // Assign levels for primary events (will go above the line)
             const MIN_SPACING = 80; // Spacing to prevent label text overlap
@@ -1298,14 +1264,11 @@ const Renderer = (() => {
             // Only labels are offset to avoid text collisions
             const positioned = [];
             
-            console.log(`Primary levels: ${primaryLevels.length}, Secondary levels: ${secondaryLevels.length}`);
-            
             primaryLevels.forEach((level, levelIndex) => {
                 level.forEach(({ event, x, x2 }) => {
                     // Labels: Level 0 = slightly above, level 1+ = further above
                     // Circles/bars: always at yOffset=0 on the timeline
                     const labelYOffset = -(levelIndex * LABEL_HEIGHT + 15);
-                    console.log(`  Primary "${event.title}" -> level ${levelIndex}, labelYOffset ${labelYOffset}`);
                     positioned.push({ event, x, x2, labelYOffset });
                 });
             });
@@ -1315,7 +1278,6 @@ const Renderer = (() => {
                     // Labels: Level 0 = slightly below, level 1+ = further below
                     // Circles/bars: always at yOffset=0 on the timeline
                     const labelYOffset = (levelIndex * LABEL_HEIGHT + 20);
-                    console.log(`  Secondary "${event.title}" -> level ${levelIndex}, labelYOffset ${labelYOffset}`);
                     positioned.push({ event, x, x2, labelYOffset });
                 });
             });
@@ -1674,15 +1636,6 @@ const Renderer = (() => {
             });
 
             if (!isFinite(minX)) return null;
-
-            console.log('Content bounds:', {
-                minX, minY, maxX, maxY,
-                width: maxX - minX,
-                height: maxY - minY,
-                currentZoom: state.zoom,
-                currentPanX: state.panX,
-                currentPanY: state.panY
-            });
 
             // Return actual min/max coordinates
             return {
