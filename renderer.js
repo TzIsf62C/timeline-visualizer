@@ -1100,6 +1100,11 @@ const Renderer = (() => {
         });
 
         const groupKeys = Object.keys(groups).sort();
+        
+        // Calculate dynamic label column width based on longest label
+        const maxLabelLength = Math.max(...groupKeys.map(key => Math.min(key.length, 22)));
+        // Approximate width: 8px per character + 20px padding
+        const dynamicLabelWidth = Math.max(80, Math.min(maxLabelLength * 8 + 20, 180));
 
         // Calculate date range (considering both start and end dates)
         const allDates = [];
@@ -1125,9 +1130,9 @@ const Renderer = (() => {
         const endDate = new Date(maxDate.getTime() + padding);
 
         // Calculate scale (account for frozen label column)
-        const timelineWidth = width - SPLIT_VIEW_LABEL_WIDTH - MARGIN.right;
+        const timelineWidth = width - dynamicLabelWidth - MARGIN.right;
         const scale = (timelineWidth * state.zoom) / (endDate - startDate);
-        const axisStartX = SPLIT_VIEW_LABEL_WIDTH + state.panX;
+        const axisStartX = dynamicLabelWidth + state.panX;
 
         // Draw alternating month column backgrounds aligned with date labels
         const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
@@ -1213,9 +1218,9 @@ const Renderer = (() => {
             // Row background (starts after label column)
             if (rowIndex % 2 === 0) {
                 const rowBg = createSVGElement('rect', {
-                    x: SPLIT_VIEW_LABEL_WIDTH,
+                    x: dynamicLabelWidth,
                     y: rowY - rowHeight / 2,
-                    width: width - SPLIT_VIEW_LABEL_WIDTH,
+                    width: width - dynamicLabelWidth,
                     height: rowHeight,
                     fill: 'rgba(255, 255, 255, 0.02)'
                 });
@@ -1573,7 +1578,7 @@ const Renderer = (() => {
         const labelColumnBg = createSVGElement('rect', {
             x: 0,
             y: 0,
-            width: SPLIT_VIEW_LABEL_WIDTH,
+            width: dynamicLabelWidth,
             height: height,
             fill: getCSSVar('--bg-secondary'),
             'fill-opacity': '1',
