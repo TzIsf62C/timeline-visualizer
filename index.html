@@ -77,7 +77,6 @@
             <!-- Actions -->
             <section class="actions">
                 <button id="exportJsonBtn" class="btn-secondary">Export JSON</button>
-                <button id="importJsonBtn" class="btn-secondary">Import JSON</button>
                 <button id="exportPngBtn" class="btn-secondary">Export PNG</button>
                 <button id="exportPdfBtn" class="btn-secondary">Export PDF</button>
             </section>
@@ -198,7 +197,20 @@
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
-                <form id="timelineForm">
+                <!-- Choice between creating new or importing -->
+                <div id="timelineChoiceView">
+                    <p style="margin-bottom: 20px; color: var(--text-secondary);">Choose an option:</p>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <button type="button" class="btn-primary" id="createNewTimelineBtn" style="padding: 16px;">Create New Timeline</button>
+                        <button type="button" class="btn-secondary" id="importTimelineBtn" style="padding: 16px;">Import from JSON File</button>
+                    </div>
+                    <div class="modal-actions" style="margin-top: 20px;">
+                        <button type="button" class="btn-secondary" id="cancelTimelineChoiceBtn">Cancel</button>
+                    </div>
+                </div>
+                
+                <!-- Form for creating new timeline -->
+                <form id="timelineForm" style="display: none;">
                     <div class="form-group">
                         <label for="timelineName">Timeline Name *</label>
                         <input type="text" id="timelineName" required>

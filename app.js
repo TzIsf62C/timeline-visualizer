@@ -79,9 +79,6 @@ const App = (() => {
 
         // Export/Import
         document.getElementById('exportJsonBtn').addEventListener('click', exportJSON);
-        document.getElementById('importJsonBtn').addEventListener('click', () => {
-            document.getElementById('fileInput').click();
-        });
         document.getElementById('fileInput').addEventListener('change', handleFileImport);
         document.getElementById('exportPngBtn').addEventListener('click', () => showExportOptionsModal('png'));
         document.getElementById('exportPdfBtn').addEventListener('click', () => showExportOptionsModal('pdf'));
@@ -158,7 +155,17 @@ const App = (() => {
             closeModal('timelineModal');
         });
 
+        document.getElementById('cancelTimelineChoiceBtn').addEventListener('click', () => {
+            closeModal('timelineModal');
+        });
+        
         document.getElementById('cancelTimelineBtn').addEventListener('click', () => {
+            closeModal('timelineModal');
+        });
+        
+        document.getElementById('createNewTimelineBtn').addEventListener('click', showCreateNewTimelineForm);
+        document.getElementById('importTimelineBtn').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
             closeModal('timelineModal');
         });
 
@@ -459,9 +466,20 @@ const App = (() => {
      */
     function showNewTimelineModal() {
         document.getElementById('timelineModalTitle').textContent = 'New Timeline';
+        document.getElementById('timelineChoiceView').style.display = 'block';
+        document.getElementById('timelineForm').style.display = 'none';
+        openModal('timelineModal');
+    }
+    
+    /**
+     * Show create new timeline form
+     */
+    function showCreateNewTimelineForm() {
+        document.getElementById('timelineModalTitle').textContent = 'Create New Timeline';
+        document.getElementById('timelineChoiceView').style.display = 'none';
+        document.getElementById('timelineForm').style.display = 'block';
         document.getElementById('timelineName').value = '';
         document.getElementById('timelineForm').dataset.mode = 'new';
-        openModal('timelineModal');
     }
 
     /**
