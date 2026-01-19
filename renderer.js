@@ -1569,11 +1569,6 @@ const Renderer = (() => {
             });
         });
 
-        // Draw date labels - fixed at bottom in split view
-        // Add extra space for zoom controls and legend button (80px total bottom margin)
-        const fixedY = height - 80 + 20;
-        drawDateLabels(startDate, endDate, axisStartX, scale, fixedY);
-        
         // Draw frozen label column on top with full opacity
         const labelColumnBg = createSVGElement('rect', {
             x: 0,
@@ -1600,6 +1595,27 @@ const Renderer = (() => {
             rowLabel.textContent = key.length > 22 ? key.substring(0, 22) + '...' : key;
             svg.appendChild(rowLabel);
         });
+        
+        // Draw frozen bottom row for date labels with full opacity (renders on top of frozen column)
+        const frozenRowHeight = 120;
+        const frozenRowY = height - frozenRowHeight;
+        const fixedY = frozenRowY + 20;
+        
+        // Background for frozen bottom row
+        const frozenRowBg = createSVGElement('rect', {
+            x: 0,
+            y: frozenRowY,
+            width: width,
+            height: frozenRowHeight,
+            fill: getCSSVar('--bg-secondary'),
+            'fill-opacity': '1',
+            'stroke': getCSSVar('--border-color'),
+            'stroke-width': '1'
+        });
+        svg.appendChild(frozenRowBg);
+        
+        // Draw date labels on top of frozen row
+        drawDateLabels(startDate, endDate, axisStartX, scale, fixedY);
     }
 
     /**
