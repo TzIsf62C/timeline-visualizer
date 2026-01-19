@@ -53,6 +53,7 @@ const Renderer = (() => {
 
     // Timeline dimensions
     const MARGIN = { top: 60, right: 100, bottom: 60, left: 100 };
+    const SPLIT_VIEW_LABEL_WIDTH = 180; // Width of frozen label column in split view
     const BASE_ROW_HEIGHT = 80;
     const EVENT_RADIUS = 6;
     const TODAY_LINE_COLOR = '#E74C3C';
@@ -124,6 +125,38 @@ const Renderer = (() => {
             zoomSlider.value = 1;
             render();
         });
+        
+        // Keyboard shortcuts for zoom
+        document.addEventListener('keydown', handleKeyboardZoom);
+    }
+    
+    /**
+     * Handle keyboard shortcuts for zoom control
+     */
+    function handleKeyboardZoom(e) {
+        // Check for Cmd (Mac) or Ctrl (Windows/Linux)
+        if (e.metaKey || e.ctrlKey) {
+            if (e.key === '=' || e.key === '+') {
+                // Zoom in
+                e.preventDefault();
+                setZoom(state.zoom * 1.2);
+            } else if (e.key === '-' || e.key === '_') {
+                // Zoom out
+                e.preventDefault();
+                setZoom(state.zoom / 1.2);
+            } else if (e.key === '0') {
+                // Reset zoom
+                e.preventDefault();
+                const zoomSlider = document.getElementById('zoomSlider');
+                state.zoom = 1;
+                state.panX = 0;
+                state.panY = 0;
+                if (zoomSlider) {
+                    zoomSlider.value = 1;
+                }
+                render();
+            }
+        }
     }
 
     /**
@@ -167,14 +200,21 @@ const Renderer = (() => {
     }
 
     /**
-     * Handle wheel for horizontal scrolling
+     * Handle wheel for horizontal/vertical scrolling
      */
     function handleWheel(e) {
         e.preventDefault();
         
-        // Use wheel for horizontal panning
-        const delta = e.deltaY;
-        state.panX -= delta;
+        // Use horizontal wheel/trackpad motion for horizontal panning
+        if (e.deltaX !== 0) {
+            state.panX -= e.deltaX;
+        }
+        
+        // In split view, use vertical scroll for vertical panning if content is larger than screen
+        if ((state.viewMode === 'entity' || state.viewMode === 'goal') && e.deltaY !== 0) {
+            state.panY -= e.deltaY;
+        }
+        // In single timeline view, vertical scroll does nothing
         
         constrainPan();
         render();
@@ -209,15 +249,20 @@ const Renderer = (() => {
         const startDate = new Date(minDate.getTime() - padding);
         const endDate = new Date(maxDate.getTime() + padding);
         
-        const timelineWidth = width - MARGIN.left - MARGIN.right;
+        // Adjust for split view with frozen label column
+        const leftMargin = (state.viewMode === 'entity' || state.viewMode === 'goal') 
+            ? SPLIT_VIEW_LABEL_WIDTH 
+            : MARGIN.left;
+        
+        const timelineWidth = width - leftMargin - MARGIN.right;
         const scale = (timelineWidth * state.zoom) / (endDate - startDate);
         const totalTimelineWidth = (endDate - startDate) * scale;
         
         // Constrain horizontal pan
         // Left endpoint cannot go past right edge of screen
-        const maxPanX = width - MARGIN.left;
+        const maxPanX = width - leftMargin;
         // Right endpoint cannot go past left edge of screen
-        const minPanX = -(totalTimelineWidth - MARGIN.left);
+        const minPanX = -(totalTimelineWidth - leftMargin);
         
         state.panX = Math.max(minPanX, Math.min(maxPanX, state.panX));
         
@@ -1079,12 +1124,62 @@ const Renderer = (() => {
         const startDate = new Date(minDate.getTime() - padding);
         const endDate = new Date(maxDate.getTime() + padding);
 
-        // Calculate scale
-        const timelineWidth = width - MARGIN.left - MARGIN.right;
+        // Calculate scale (account for frozen label column)
+        const timelineWidth = width - SPLIT_VIEW_LABEL_WIDTH - MARGIN.right;
         const scale = (timelineWidth * state.zoom) / (endDate - startDate);
+        const axisStartX = SPLIT_VIEW_LABEL_WIDTH + state.panX;
+
+        // Draw alternating month column backgrounds aligned with date labels
+        const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+        let interval;
+        if (totalDays < 90) {
+            interval = 7; // Weekly
+        } else if (totalDays < 365) {
+            interval = 30; // Monthly
+        } else {
+            interval = 90; // Quarterly
+        }
+        
+        const currentDate = new Date(startDate);
+        let columnIndex = 0;
+        let prevX = null;
+        
+        while (currentDate <= endDate) {
+            const x = axisStartX + (currentDate - startDate) * scale;
+            
+            // Draw column background between previous and current tick
+            if (prevX !== null && columnIndex % 2 === 0) {
+                const columnBg = createSVGElement('rect', {
+                    x: prevX,
+                    y: 0,
+                    width: x - prevX,
+                    height: height,
+                    fill: 'rgba(128, 128, 128, 0.08)',
+                    'pointer-events': 'none'
+                });
+                svg.appendChild(columnBg);
+            }
+            
+            prevX = x;
+            currentDate.setDate(currentDate.getDate() + interval);
+            columnIndex++;
+        }
+        
+        // Draw final column if needed
+        if (prevX !== null && columnIndex % 2 === 0) {
+            const finalX = axisStartX + (endDate - startDate) * scale;
+            const columnBg = createSVGElement('rect', {
+                x: prevX,
+                y: 0,
+                width: finalX - prevX,
+                height: height,
+                fill: 'rgba(128, 128, 128, 0.08)',
+                'pointer-events': 'none'
+            });
+            svg.appendChild(columnBg);
+        }
 
         // Draw today line
-        const axisStartX = MARGIN.left + state.panX;
         if (today >= startDate && today <= endDate) {
             const todayX = axisStartX + (today - startDate) * scale;
             const todayLine = createSVGElement('line', {
@@ -1115,27 +1210,27 @@ const Renderer = (() => {
         groupKeys.forEach((key, rowIndex) => {
             const rowY = MARGIN.top + rowIndex * rowHeight + state.panY;
             
-            // Row background
+            // Row background (starts after label column)
             if (rowIndex % 2 === 0) {
                 const rowBg = createSVGElement('rect', {
-                    x: 0,
+                    x: SPLIT_VIEW_LABEL_WIDTH,
                     y: rowY - rowHeight / 2,
-                    width: width,
+                    width: width - SPLIT_VIEW_LABEL_WIDTH,
                     height: rowHeight,
                     fill: 'rgba(255, 255, 255, 0.02)'
                 });
                 svg.appendChild(rowBg);
             }
 
-            // Row label
+            // Row label (fixed position, not affected by panX)
             const rowLabel = createSVGElement('text', {
                 x: 10,
                 y: rowY + 5,
-                fill: '#A0A0A0',
+                fill: 'var(--text-primary)',
                 'font-size': '12px',
                 'font-weight': 'bold'
             });
-            rowLabel.textContent = key;
+            rowLabel.textContent = key.length > 22 ? key.substring(0, 22) + '...' : key;
             svg.appendChild(rowLabel);
 
             // Row timeline
@@ -1475,8 +1570,36 @@ const Renderer = (() => {
         });
 
         // Draw date labels - fixed at bottom in split view
-        const fixedY = height - MARGIN.bottom + 20;
+        // Add extra space for zoom controls and legend button (80px total bottom margin)
+        const fixedY = height - 80 + 20;
         drawDateLabels(startDate, endDate, axisStartX, scale, fixedY);
+        
+        // Draw frozen label column on top with full opacity
+        const labelColumnBg = createSVGElement('rect', {
+            x: 0,
+            y: 0,
+            width: SPLIT_VIEW_LABEL_WIDTH,
+            height: height,
+            fill: getCSSVar('--bg-secondary'),
+            'fill-opacity': '1',
+            'stroke': getCSSVar('--border-color'),
+            'stroke-width': '1'
+        });
+        svg.appendChild(labelColumnBg);
+        
+        // Re-render row labels on top of the background
+        groupKeys.forEach((key, rowIndex) => {
+            const rowY = MARGIN.top + rowIndex * rowHeight + state.panY;
+            const rowLabel = createSVGElement('text', {
+                x: 10,
+                y: rowY + 5,
+                fill: getCSSVar('--text-primary'),
+                'font-size': '12px',
+                'font-weight': 'bold'
+            });
+            rowLabel.textContent = key.length > 22 ? key.substring(0, 22) + '...' : key;
+            svg.appendChild(rowLabel);
+        });
     }
 
     /**
